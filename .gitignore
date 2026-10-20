@@ -1,0 +1,21 @@
+igt.DS_Store
+.env
+__pycache__/
+*.pyc
+* 2.json
+* 2.jsonl
+.venv/
+src/*.egg-info/
+integrations/safeclaw/upstream/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+# Generated evidence and run artifacts
+experiments/runs/*
+!experiments/runs/.gitkeep
+# Local virtual environments
+.venv-vllm/
+
+# Generated libraries and frozen artifacts
+data/frozen/*
+!data/frozen/.gitkeep

@@ -1,0 +1,97 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "primitive-attack-library/1",
+      "default": "primitive-attack-library/1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope": {
+      "default": "synthetic_only",
+      "enum": [
+        "synthetic_only",
+        "real_development_preview"
+      ],
+      "title": "Scope",
+      "type": "string"
+    },
+    "library_id": {
+      "title": "Library Id",
+      "type": "string"
+    },
+    "source_run": {
+      "title": "Source Run",
+      "type": "string"
+    },
+    "source_manifest_hash": {
+      "title": "Source Manifest Hash",
+      "type": "string"
+    },
+    "catalog_hash": {
+      "title": "Catalog Hash",
+      "type": "string"
+    },
+    "split_hash": {
+      "title": "Split Hash",
+      "type": "string"
+    },
+    "attempt_denominator": {
+      "title": "Attempt Denominator",
+      "type": "integer"
+    },
+    "attempt_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Attempt Ids",
+      "type": "array"
+    },
+    "sample_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Sample Ids",
+      "type": "array"
+    },
+    "policy": {
+      "default": "synthetic-only/1",
+      "enum": [
+        "synthetic-only/1",
+        "real-development-preview/1"
+      ],
+      "title": "Policy",
+      "type": "string"
+    },
+    "rule_version": {
+      "title": "Rule Version",
+      "type": "string"
+    },
+    "file_hashes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "File Hashes",
+      "type": "object"
+    },
+    "manifest_hash": {
+      "title": "Manifest Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "library_id",
+    "source_run",
+    "source_manifest_hash",
+    "catalog_hash",
+    "split_hash",
+    "attempt_denominator",
+    "attempt_ids",
+    "sample_ids",
+    "rule_version",
+    "file_hashes",
+    "manifest_hash"
+  ],
+  "title": "LibraryManifest",
+  "type": "object"
+}
