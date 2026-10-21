@@ -12,18 +12,17 @@
 
 ## 当前状态与整理依据
 
+- [2026-10-21 恢复与验证说明](RECOVERY_AND_VALIDATION_20261021.md)：当前代码来源、验证状态和 Linux 离线运行方法。
 - [进度记录](IMPLEMENTATION_PROGRESS.md)：顶部为最新检查点，下方保留历史。
 - [工作计划](IMPLEMENTATION_WORKPLAN.md)：当前下一步与以往计划。
-- [结构与清理审查](rse/specs/research-repository-cleanup.md)：可删缓存、归档候选、活跃旧依赖及本轮验证。
+- [2026-10-14 服务器补写记录](SERVER_REIMPLEMENTATION_20261014.md)：补写功能与历史验证记录。
 - [primitive-only 开发采集计划](rse/specs/plan-primitive-development-campaign.md)：最近批次的固定范围，不是通用运行教程。
 
 ## 历史设计与审查
 
 这些材料保留设计和验证背景；以其中日期、源码版本和批次为限，不作为今天重新执行真实实验的许可。
 
-- [重构实施方案](AgentLAB_SafeClawArena_原语样本库与Planner实验重构实施方案.md)：原始设计动机，部分迁移路径已退役。
-- [R4 runtime 任务书](ATTACK_PROGRAM_R4_RUNTIME_TASK.md)：2026-09-28 阶段目标和接口要求。
-- [历史代码审查任务](SKILL_BASED_CODE_REVIEW_TASK.md)与[2026-09-28 审查记录](CODE_REVIEW_VALIDATION_20260928.md)。
+- 原始重构方案、R4 runtime 任务书、9 月 28 日代码审查与清理清单未包含在本次恢复快照中，历史正文中的相关引用保留为线索。
 - [设计、计划、验证与交接记录](rse/specs/)及[实施报告](rse/reports/)：按文件日期与对应批次查阅。
 
 历史实验与 prompt 的冻结副本是复现证据。已退出主导航不等于可以删除；部分仍被当前脚本和测试读取。

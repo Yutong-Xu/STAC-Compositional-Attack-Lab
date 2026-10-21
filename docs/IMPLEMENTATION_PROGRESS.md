@@ -1,4 +1,8 @@
-# 当前记录 — 2026-10-14 服务器依据文档补写缺失功能
+# 当前记录 — 2026-10-21 重建服务器补写版本并准备新仓库
+
+原服务器补写目录不存在，已根据此前保存的源码编辑记录重建，并保存为新 Git 快照 c65737d。重建副本位于服务器 STAC-Compositional-Attack-Lab-recovered-20261021 目录。本次静态检查通过；完整回归停止于 76 passed/3 errors，上游项目外符号链接不符合 R4 校验要求，后续 SSH 超时，尚未确认修复和最终回归。用户已授权在 Yutong-Xu 下新建仓库并推送；原仓库保持原状，未运行真实模型。来源、当前验证和历史记录边界见 [恢复说明](RECOVERY_AND_VALIDATION_20261021.md)。
+
+# 历史记录 — 2026-10-14 服务器依据文档补写缺失功能
 
 仅服务器修改；以6b25246恢复代码为基础重新实现，非找回10.5原文件。本地未同步，Git未提交或推送。完成Planner字段保护、生产HTTP诊断、真实开发预览去重、R4预算/来源/usage、19–24编排与报告。最终完整pytest158 passed/3 skipped（历史fixture缺失），Ruff格式/check、mypy34源文件、pip check和diff检查通过。
 Docker v2：Planner模拟3、有效2/重复1；Victim完成2/模拟HTTP12，独立audit valid；

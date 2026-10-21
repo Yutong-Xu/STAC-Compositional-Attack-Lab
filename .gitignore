@@ -1,5 +1,7 @@
-igt.DS_Store
+.DS_Store
 .env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 * 2.json
@@ -19,3 +21,10 @@ experiments/runs/*
 # Generated libraries and frozen artifacts
 data/frozen/*
 !data/frozen/.gitkeep
+
+# Local transfers, credentials and recovery evidence
+source-transfer.tar.gz
+*.bundle
+*.pem
+*.key
+credentials.json

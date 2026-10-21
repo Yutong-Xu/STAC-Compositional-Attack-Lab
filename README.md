@@ -1,5 +1,7 @@
 # STAC Compositional Attack Lab
 
+**2026-10-21 恢复版：** 本仓库保存依据此前服务器修改记录重建的代码，包含 10 月 14 日补写功能。当前完整回归尚未通过：上游目录校验问题待处理，服务器隧道暂时无法连接。请先阅读[恢复来源与本次验证状态](docs/RECOVERY_AND_VALIDATION_20261021.md)；下方历史批次记录不代表本版本已重新验证。
+
 面向大模型智能体的**组合式提示注入研究仓库**：在固定版本的 SafeClawArena 任务中，限定可修改的外部材料，构造攻击候选，记录智能体行为，并通过官方检查、独立分析和重放审计建立可追溯证据。
 
 研究问题是：把历史攻击材料组织为带有行为原语和证据关系的样本，是否有助于 Planner 在新任务中选择、组合攻击材料？当前仓库提供研究所需的工程链路；**尚不能据此宣称结构化样本优于原始样本，或已经完成正式泛化实验。**
@@ -18,7 +20,7 @@
 ## 从这里开始
 
 - **第一次接触项目：** 阅读[项目结构与运行入门指南](docs/PROJECT_STRUCTURE_ZH.md)，从术语、代码目录到一次完整离线练习逐步学习。
-- **准备整理仓库：** 阅读[清理审查清单](docs/rse/specs/research-repository-cleanup.md)，查看可删除缓存、可退役入口及仍被依赖的历史材料。
+- **了解恢复版本：** 阅读[恢复说明](docs/RECOVERY_AND_VALIDATION_20261021.md)，查看代码来源、当前验证限制和离线运行方法。
 - **继续开发：** 阅读 [AGENTS.md](AGENTS.md)、[安全边界](SECURITY.md)、[当前计划](docs/IMPLEMENTATION_WORKPLAN.md)和[实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 - **查具体命令：** 使用[脚本说明](scripts/README.md)和 CLI `--help`；历史批次示例不是新的执行授权。
 
@@ -46,7 +48,7 @@ make demo-r3 PYTHON=python RUN_ID="tutorial-r3-$(date +%Y%m%d-%H%M%S)-$$"
 ## 仓库布局
 
 ```text
-src/stac_attack_lab/       Python 包：attack_program 主链及共享 HTTP client
+src/stac_attack_lab/       Python 包：attack_program 主链及 HTTP 适配
 configs/attack_program/   当前配置、任务划分和两个在用 prompt
 schemas/                  从数据合同生成的 JSON Schema
 scripts/attack_program/   离线包装、fake 验收及真实开发批次入口
@@ -54,10 +56,10 @@ tests/integration/        合同、语义、生命周期、HTTP 与审计测试
 integrations/safeclaw/    pinned 上游 checkout 与独立安全补丁
 docs/                     入门指南、协议、进度和历史设计记录
 experiments/runs/         本地运行产物与证据；默认不进 Git
-data/                     历史数据与库；保留复现依赖
+data/                     本地数据与库；历史数据未随本恢复仓库发布
 ```
 
-R1–R4 是同一主链的不同层次，不能为了“只留 R4”删除 R1–R3。旧 capability/flow 等路线已不在当前源码主链中。最新批次脚本仍可能依赖较早脚本和历史冻结输入，详见清理清单。
+R1–R4 是同一主链的不同层次，不能为了“只留 R4”删除 R1–R3。旧 capability/flow 等路线已不在当前源码主链中。历史批次的冻结输入未随恢复源码发布，不能仅凭代码重现过去的真实实验。
 
 ## 验证与复现
 
@@ -72,7 +74,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q \
 
 维护者质量门为 `make check PYTHON=python`，包括 Ruff、mypy 与测试。部分完整测试依赖本机封存实验和导入记录，因此不是仅安装依赖即可保证通过的干净克隆测试集。不要为得到全绿而删除历史数据依赖测试；先查明缺失输入。
 
-`make schemas PYTHON=python` **会写入 schema 文件**，仅在修改数据合同时运行，并审查差异。2026-10-05 文档审查的实际验证及限制记录在[审查清单](docs/rse/specs/research-repository-cleanup.md)中，不以历史测试数字代替当前验证。
+`make schemas PYTHON=python` **会写入 schema 文件**，仅在修改数据合同时运行，并审查差异。本次恢复验证及限制见[恢复说明](docs/RECOVERY_AND_VALIDATION_20261021.md)，不以历史测试数字代替当前验证。
 
 ## 研究结果与数据管理
 
@@ -82,4 +84,4 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q \
 
 ## 项目状态、许可与引用
 
-这是持续开发中的研究原型，当前工作树包含未提交实现；引用或复现时应同时记录 commit、工作树状态、配置、prompt 与批次 manifest。仓库目前未提供根目录 LICENSE 或 CITATION.cff；对外分发前需由维护者明确许可与引用信息。上游组件遵循各自许可。本 README 不虚构论文、DOI、作者信息或开放许可。
+这是持续开发中的研究原型；引用或复现时应同时记录 commit、工作树状态、配置、prompt 与批次 manifest。来源为 [Scaramcci/STAC-Compositional-Attack-Lab](https://github.com/Scaramcci/STAC-Compositional-Attack-Lab)，补写和恢复范围见[恢复说明](docs/RECOVERY_AND_VALIDATION_20261021.md)。仓库目前未提供根目录 LICENSE 或 CITATION.cff；上游组件遵循各自许可，本恢复仓库没有新增开放许可。
