@@ -57,6 +57,9 @@ def main(argv: list[str] | None = None) -> int:
     prepare.add_argument("--planner-model", default="scripted")
     prepare.add_argument("--expected-model", default="scripted")
     prepare.add_argument("--endpoint", default="")
+    prepare.add_argument("--planner-api-key-env", default="SAFECLAW_API_KEY")
+    prepare.add_argument("--planner-reasoning-effort", choices=("none", "low", "high", "max"))
+    prepare.add_argument("--avoid-secret-assignments", action="store_true")
     for name in (
         "preflight",
         "status",
@@ -98,6 +101,9 @@ def main(argv: list[str] | None = None) -> int:
                 planner_model=args.planner_model,
                 expected_model=args.expected_model,
                 endpoint=args.endpoint,
+                planner_api_key_env=args.planner_api_key_env,
+                planner_reasoning_effort=args.planner_reasoning_effort,
+                avoid_secret_assignments=args.avoid_secret_assignments,
             )
         elif args.command == "preview":
             result = create_preview(ROOT, campaign.read(args.sources), args.output)

@@ -172,6 +172,7 @@ class OpenAICompatibleClient:
         response_policy: str | None = None,
         exact_private_values: list[str] | None = None,
         expected_returned_model: str | None = None,
+        reasoning_effort: str | None = None,
     ) -> None:
         self.model_id = model_id
         self.max_output_tokens = max_output_tokens
@@ -195,6 +196,9 @@ class OpenAICompatibleClient:
         self.response_policy = response_policy
         self.exact_private_values = list(exact_private_values or [])
         self.expected_returned_model = expected_returned_model
+        if reasoning_effort not in {None, "none", "low", "high", "max"}:
+            raise ValueError("reasoning_effort_invalid")
+        self.reasoning_effort = reasoning_effort
         self.last_diagnostic: dict[str, Any] | None = None
         self.last_projection: dict[str, Any] | None = None
         self.last_http_response: bytes | None = None
@@ -258,15 +262,20 @@ class OpenAICompatibleClient:
         payload = {
             "model": self.model_id,
             "messages": [{"role": "system", "content": prompt}, *messages],
-            "temperature": 0,
             "max_tokens": self.max_output_tokens,
         }
+        # Gemini 3+ no longer accepts explicit sampling parameters.
+        if not (self._is_gemini_endpoint and self.model_id.startswith("gemini-3")):
+            payload["temperature"] = 0
         # Gemini rejects the OpenAI-only seed field.
         if not self._is_gemini_endpoint:
             payload["seed"] = seed
-        if self._is_gemini_endpoint:
-            payload["response_format"] = {"type": "json_object"}
-        elif self.use_response_format:
+        if self.reasoning_effort is not None:
+            payload["reasoning_effort"] = self.reasoning_effort
+        # Google's OpenAI-compatible examples use plain chat completions or a
+        # JSON schema. Keep the schema in the prompt and validate locally;
+        # json_object is not documented for this endpoint.
+        if not self._is_gemini_endpoint and self.use_response_format:
             payload["response_format"] = {
                 "type": "json_schema",
                 "json_schema": {
@@ -420,6 +429,9 @@ def _post_json(
             record.response_observed = True
             record.error_body = None
             record.failure_layer = "provider_http"
+            # Never archive a provider error body: it can echo prompts or keys.
+            # Persist only an allowlisted classification for diagnosis.
+            record.diagnostic = _safe_http_error_diagnostic(exc.read(4097), api_key)
             exc.close()
             record.duration_ms = round((monotonic() - started) * 1000, 3)
         raise
@@ -432,6 +444,49 @@ def _post_json(
     finally:
         if ledger is not None and record is not None:
             ledger.finish(record)
+
+
+def _safe_http_error_diagnostic(raw: bytes, api_key: str) -> dict[str, str]:
+    """Classify an upstream error without retaining its free-form text."""
+    diagnostic = {"provider_error_status": "unknown", "provider_error_hint": "unknown"}
+    try:
+        parsed = json.loads(raw[:4096].decode("utf-8"))
+        error = parsed.get("error", {}) if isinstance(parsed, dict) else {}
+        if not isinstance(error, dict):
+            return diagnostic
+        status = error.get("status")
+        if status in {
+            "INVALID_ARGUMENT",
+            "UNAUTHENTICATED",
+            "PERMISSION_DENIED",
+            "NOT_FOUND",
+            "RESOURCE_EXHAUSTED",
+            "FAILED_PRECONDITION",
+        }:
+            diagnostic["provider_error_status"] = status
+        message = error.get("message")
+        if not isinstance(message, str):
+            return diagnostic
+        normalized = message.lower()
+        # Discard messages that echo the credential; never persist their text.
+        if api_key and api_key.lower() in normalized:
+            return diagnostic
+        hints = (
+            ("response_format", "response_format"),
+            ("max_tokens", "output_token_limit"),
+            ("max_output_tokens", "output_token_limit"),
+            ("api key", "api_key"),
+            ("model", "model"),
+            ("quota", "quota"),
+            ("region", "region"),
+        )
+        for marker, hint in hints:
+            if marker in normalized:
+                diagnostic["provider_error_hint"] = hint
+                break
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        pass
+    return diagnostic
 
 
 def _extract_json(content: str) -> str:

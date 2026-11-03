@@ -1,3 +1,12 @@
+# 当前记录 — 2026-11-03 正常轨迹两组实验离线准备层
+
+新增 trajectory_pair.py 和 BENIGN_TRAJECTORY_PAIR.md，以及专项测试文件。两组共享正常轨迹和实验设置；只向原语组增加定义和审核标注；相同攻击保留两个独立的待执行 slot。校验事件身份/顺序、证据引用、审核声明、计划哈希和修改面。所有输出默认禁用。
+
+本轮标准库直接检查 8 项通过，真实请求 0；git diff --check 通过。当前沙盒 Python 未安装 pytest，专项 pytest 未能运行，不声称完整回归通过。真实良性轨迹采集、公开投影的敏感值审核与来源绑定、两组真实执行隔离以及配对结果报告仍待接入。没有更新服务器或推送 GitHub，既有修改保留。
+# 当前记录 — 2026-10-22 Gemini Planner 凭据分离服务器离线查收
+
+用户指定新火山 Victim EP `ep-20261021230120-h2bbm` / DeepSeek-V4.1-Flash `261017`，并已有 Google 官方 Gemini API Key。当前待审方案使用 `gemini-3.8-flash` 作 Planner、上述火山 EP 作 Victim。独立本地工作副本新增 `--planner-api-key-env GEMINI_API_KEY`，A 阶段仅检查 Planner 凭据、B 阶段仅检查 Victim 凭据，Gemini 3.x 请求不再带旧 `temperature` 参数。服务器恢复目录实际 HEAD 为 `c65737d`；只将五个源码/测试文件的固定补丁应用于该目录，两份不同版本的服务器进度文档保持原样。服务器 format/lint/mypy 均退出 0；SSH 在 pytest 阶段断开后，只读查收确认完整 JUnit 为 164 tests、0 failures、0 errors、3 skipped，进程已结束，退出码未被终端回执保存。日志目录 `experiments/runs/meeting-gemini-offline-20261021-180623-2929561`。凭据值未写入仓库，真实模型请求 0；新 EP 配置、Docker fake、真实样本来源和真实模型兼容性仍待查收，真实执行须新批次授权。
+
 # 当前记录 — 2026-10-21 重建服务器补写版本并准备新仓库
 
 原服务器补写目录不存在，已根据此前保存的源码编辑记录重建，并保存为新 Git 快照 c65737d。重建副本位于服务器 STAC-Compositional-Attack-Lab-recovered-20261021 目录。本次静态检查通过；完整回归停止于 76 passed/3 errors，上游项目外符号链接不符合 R4 校验要求，后续 SSH 超时，尚未确认修复和最终回归。用户已授权在 Yutong-Xu 下新建仓库并推送；原仓库保持原状，未运行真实模型。来源、当前验证和历史记录边界见 [恢复说明](RECOVERY_AND_VALIDATION_20261021.md)。

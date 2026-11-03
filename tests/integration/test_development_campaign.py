@@ -116,12 +116,63 @@ def test_real_run_cannot_use_synthetic_library(library, tmp_path):
     assert not (tmp_path / "real").exists()
 
 
+def test_planner_and_victim_credentials_are_stage_specific(library, tmp_path, monkeypatch):
+    run = tmp_path / "pilot"
+    c.prepare(ROOT, library, run, kind="pilot", planner_api_key_env="GEMINI_API_KEY")
+    plan = c.load(ROOT, run)
+    assert plan["api_key_env"] == "GEMINI_API_KEY"
+    assert c.authorization_preview(plan, "a", 1)["planner_api_key_env"] == "GEMINI_API_KEY"
+    assert c.authorization_preview(plan, "b", 1)["victim_api_key_env"] == "SAFECLAW_API_KEY"
+    assert c.required_api_key_envs(plan, "a") == ("GEMINI_API_KEY",)
+    assert c.required_api_key_envs(plan, "b") == ("SAFECLAW_API_KEY",)
+    assert c.required_api_key_envs(plan, "run") == ("GEMINI_API_KEY", "SAFECLAW_API_KEY")
+    real_plan = {**plan, "mode": "real"}
+    monkeypatch.setattr(c, "load", lambda _root, _run: real_plan)
+    a_auth = tmp_path / "a-auth.json"
+    b_auth = tmp_path / "b-auth.json"
+    c.write(a_auth, c.authorization_preview(real_plan, "a", 1))
+    c.write(b_auth, c.authorization_preview(real_plan, "b", 1))
+    monkeypatch.setenv("SAFECLAW_API_KEY", "local-fake-ark-key")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    with pytest.raises(GateError, match="campaign_planner_api_key_missing"):
+        c.run_stage(ROOT, run, stage="a", block=1, authorization=a_auth, acknowledge=True)
+    monkeypatch.setenv("GEMINI_API_KEY", "local-fake-google-key")
+    monkeypatch.delenv("SAFECLAW_API_KEY", raising=False)
+    with pytest.raises(GateError, match="campaign_victim_api_key_missing"):
+        c.run_stage(ROOT, run, stage="b", block=1, authorization=b_auth, acknowledge=True)
+    assert not (run / "confirmations").exists()
+
+
+def test_planner_key_selector_rejects_unapproved_environment_name(library, tmp_path):
+    with pytest.raises(GateError, match="campaign_planner_api_key_env_invalid"):
+        c.prepare(ROOT, library, tmp_path / "invalid", planner_api_key_env="HOME")
+    assert not (tmp_path / "invalid").exists()
+
+
 def test_diagnostic_never_starts_victim(library, tmp_path):
     run = tmp_path / "diagnostic"
     c.prepare(ROOT, library, run, kind="diagnostic")
     result = c.run_stage(ROOT, run)
     assert result["planner_valid"] == 1 and result["victim_completed"] == 0
     assert c.audit(ROOT, run)["status"] == "valid"
+
+
+def test_guarded_planner_options_are_frozen_without_disabling_protection(library, tmp_path):
+    run = tmp_path / "guarded"
+    c.prepare(
+        ROOT,
+        library,
+        run,
+        kind="diagnostic",
+        planner_reasoning_effort="none",
+        avoid_secret_assignments=True,
+    )
+    plan = c.load(ROOT, run)
+    assert plan["planner_reasoning_effort"] == "none"
+    assert plan["avoid_secret_assignments"] is True
+    assert "credential-like assignments" in (run / "effective-prompt.txt").read_text()
+    assert plan["projection"] == "archive"
+    assert c.status(run)["planner_http"] == 0
 
 
 def test_audit_recomputes_selection_even_when_receipt_hashes_are_rewritten(library, tmp_path):

@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
+from pydantic import BaseModel
 
 from stac_attack_lab.attack_program.demo_r2 import demo as r2_demo
 from stac_attack_lab.attack_program.models import R3Case, R3Config, R3PlannerInput
@@ -19,7 +20,134 @@ from stac_attack_lab.attack_program.r3 import (
     replay,
     run,
 )
+from stac_attack_lab.models.base import ModelCallError
 from stac_attack_lab.models.openai_compatible import OpenAICompatibleClient, ProviderRequestLedger
+
+
+def test_gemini_3_compatible_payload_omits_deprecated_sampling(monkeypatch):
+    from stac_attack_lab.models import openai_compatible
+
+    class EmptyResponse(BaseModel):
+        pass
+
+    received = []
+
+    def fake_post(url, payload, key, timeout, **kwargs):
+        received.append((url, payload, key))
+        return {
+            "model": "gemini-3.8-flash",
+            "choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}],
+        }
+
+    monkeypatch.setenv("GOOGLE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    monkeypatch.setenv("GEMINI_API_KEY", "local-fake-key")
+    monkeypatch.setattr(openai_compatible, "_post_json", fake_post)
+    client = OpenAICompatibleClient(
+        "gemini-3.8-flash", base_url_env="GOOGLE_URL", api_key_env="GEMINI_API_KEY"
+    )
+    assert isinstance(client.generate([], EmptyResponse, seed=17, timeout=3), EmptyResponse)
+    assert received[0][0].endswith("/chat/completions")
+    assert received[0][2] == "local-fake-key"
+    assert "temperature" not in received[0][1]
+    assert "seed" not in received[0][1]
+    assert "response_format" not in received[0][1]
+
+
+def test_ark_reasoning_can_be_disabled_without_changing_secret_screen(monkeypatch):
+    from stac_attack_lab.models import openai_compatible
+
+    class EmptyResponse(BaseModel):
+        pass
+
+    received = []
+
+    def fake_post(url, payload, key, timeout, **kwargs):
+        received.append(payload)
+        return {
+            "model": "ep-test",
+            "choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}],
+        }
+
+    monkeypatch.setenv("ARK_URL", "https://ark.cn-beijing.volces.com/api/v3")
+    monkeypatch.setenv("ARK_KEY", "local-fake-key")
+    monkeypatch.setattr(openai_compatible, "_post_json", fake_post)
+    client = OpenAICompatibleClient(
+        "ep-test",
+        base_url_env="ARK_URL",
+        api_key_env="ARK_KEY",
+        reasoning_effort="none",
+    )
+    assert isinstance(client.generate([], EmptyResponse, seed=17, timeout=3), EmptyResponse)
+    assert received[0]["reasoning_effort"] == "none"
+    assert received[0]["seed"] == 17
+
+
+def test_provider_400_records_only_allowlisted_diagnostic(tmp_path, monkeypatch):
+    from stac_attack_lab.models.openai_compatible import _safe_http_error_diagnostic
+
+    secret = "local-fake-secret"
+    body = json.dumps(
+        {
+            "error": {
+                "status": "INVALID_ARGUMENT",
+                "message": f"Unsupported response_format; prompt={secret}",
+            }
+        }
+    ).encode()
+    assert _safe_http_error_diagnostic(body, secret) == {
+        "provider_error_status": "INVALID_ARGUMENT",
+        "provider_error_hint": "unknown",
+    }
+    assert _safe_http_error_diagnostic(body.replace(secret.encode(), b"redacted"), secret) == {
+        "provider_error_status": "INVALID_ARGUMENT",
+        "provider_error_hint": "response_format",
+    }
+
+    class ErrorHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.rfile.read(int(self.headers["Content-Length"]))
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ErrorHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setenv("GOOGLE_URL", f"http://127.0.0.1:{server.server_port}/v1")
+        monkeypatch.setenv("GEMINI_API_KEY", secret)
+        ledger_path = tmp_path / "attempts.jsonl"
+        ledger = ProviderRequestLedger(max_requests=1, path=ledger_path, batch_id="fake-400")
+
+        class EmptyResponse(BaseModel):
+            pass
+
+        client = OpenAICompatibleClient(
+            "gemini-3.8-flash",
+            base_url_env="GOOGLE_URL",
+            api_key_env="GEMINI_API_KEY",
+            request_ledger=ledger,
+        )
+        with pytest.raises(ModelCallError, match="provider_http_400"):
+            client.generate([], EmptyResponse, seed=1, timeout=3)
+        ledger.close()
+        stored = ledger_path.read_text()
+        assert secret not in stored
+        assert "Unsupported response_format" not in stored
+        rows = [json.loads(line) for line in stored.splitlines()]
+        assert len(rows) == 2
+        assert rows[-1]["diagnostic"] == {
+            "provider_error_status": "INVALID_ARGUMENT",
+            "provider_error_hint": "unknown",
+        }
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
 
 
 class Handler(BaseHTTPRequestHandler):
